@@ -1,3 +1,4 @@
+
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -109,9 +110,6 @@ class DemoRestApiItem(APIView):
 
         if item_found_index == -1:
             return Response({'error': 'Item no encontrado para eliminar.'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Eliminar lógicamente: marcar como inactivo en lugar de removerlo de la lista
-        # Si quisieras eliminarlo físicamente de la lista en memoria: data_list.pop(item_found_index)
-        data_list[item_found_index]['is_active'] = False # Eliminación lógica
+        data_list[item_found_index]['is_active'] = False 
 
         return Response({'message': 'Item eliminado lógicamente (marcado como inactivo).'}, status=status.HTTP_200_OK)
