@@ -16,6 +16,7 @@ data_list.append({'id': str(uuid.uuid4()), 'name': 'User03', 'email': 'user03@ex
 def find_item_by_id(item_id):
     return next((item for item in data_list if item['id'] == item_id), None)
 
+
 class DemoRestApi(APIView):
     name = "Demo REST API"
 
@@ -31,6 +32,7 @@ class DemoRestApi(APIView):
         data['is_active'] = True
         data_list.append(data)
         return Response({'message': 'Dato guardado exitosamente.', 'data': data}, status=status.HTTP_201_CREATED)
+
 
 class DemoRestApiItem(APIView):
     def put(self, request, item_id):
