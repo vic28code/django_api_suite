@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import firebase_admin
+from firebase_admin import credentials
 import os
 
 
@@ -39,6 +41,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "firebase_admin",
+    "rest_framework",
     "homepage",
 ]
 
@@ -127,3 +131,11 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Coloque la ruta relativa al archivo con la clave privada
+FIREBASE_CREDENTIALS_PATH = credentials.Certificate("secrets/landing-key.json")
+
+# Inicialice la conexión con el Realtime Database con la clave privada y la URL de referencia
+firebase_admin.initialize_app(FIREBASE_CREDENTIALS_PATH, {
+   'databaseURL': 'https://pintura2-36966-default-rtdb.firebaseio.com'
+})
