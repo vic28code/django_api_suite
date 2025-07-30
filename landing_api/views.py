@@ -9,4 +9,13 @@ from datetime import datetime
 # Create your views here.
 class LandingAPI(APIView):
     name = "Landing API"
-    collection_name = "nombre_de_la_coleccion"  # Cambia este valor por el nombre real de la colección
+    collection_name = "rules"  # Cambia este valor por el nombre real de la colección
+    def get(self, request):
+        # Referencia a la colección
+        ref = db.reference(f'{self.collection_name}')
+        # get: Obtiene todos los elementos de la col ección
+        data = ref.get()
+
+        # Devuelve un arreglo JSON
+        return Response(data, status=status.HTTP_200_OK)
+
