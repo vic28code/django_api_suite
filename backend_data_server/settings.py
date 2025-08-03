@@ -29,7 +29,7 @@ SECRET_KEY = "django-insecure-7r9ekh3m8oe$sn4^fr_x53lx4ocv!v6^009^!&uab36h#w*_zg
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['vic28code.pythonanywhere.com']
+ALLOWED_HOSTS = ['localhost','vic28code.pythonanywhere.com']
 
 
 # Application definition
@@ -140,6 +140,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 FIREBASE_CREDENTIALS_PATH = credentials.Certificate("secrets/landing-key.json")
 
 # Inicialice la conexión con el Realtime Database con la clave privada y la URL de referencia
-firebase_admin.initialize_app(FIREBASE_CREDENTIALS_PATH, {
-   'databaseURL': 'https://landing-d2351-default-rtdb.firebaseio.com/'
-})
+if not firebase_admin._apps:
+    FIREBASE_CREDENTIALS_PATH = credentials.Certificate("secrets/landing-key.json")
+    firebase_admin.initialize_app(FIREBASE_CREDENTIALS_PATH, {
+       'databaseURL': 'https://landing-d2351-default-rtdb.firebaseio.com/'
+    })
