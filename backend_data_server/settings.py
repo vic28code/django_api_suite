@@ -11,9 +11,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 import firebase_admin
 from firebase_admin import credentials
-import os
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -139,5 +139,5 @@ FIREBASE_CREDENTIALS_PATH = credentials.Certificate("secrets/landing-key.json")
 
 # Inicialice la conexión con el Realtime Database con la clave privada y la URL de referencia
 firebase_admin.initialize_app(FIREBASE_CREDENTIALS_PATH, {
-   'databaseURL': 'https://pintura2-36966-default-rtdb.firebaseio.com'
+   'databaseURL': 'https://landing-d2351-default-rtdb.firebaseio.com/'
 })

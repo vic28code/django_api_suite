@@ -9,7 +9,7 @@ from datetime import datetime
 # Create your views here.
 class LandingAPI(APIView):
     name = "Landing API"
-    collection_name = "rules"  # Cambia este valor por el nombre real de la colección
+    collection_name = "pedidos"
     def get(self, request):
         # Referencia a la colección
         ref = db.reference(f'{self.collection_name}')
@@ -19,3 +19,16 @@ class LandingAPI(APIView):
         # Devuelve un arreglo JSON
         return Response(data, status=status.HTTP_200_OK)
 
+    def post(self, request):
+        data = request.data
+        # Referencia a la colección
+        ref = db.reference(f'{self.collection_name}')
+        current_time  = datetime.now()
+        custom_format = current_time.strftime("%d/%m/%Y, %I:%M:%S %p").lower().replace('am', 'a. m.').replace('pm', 'p. m.')
+        data.update({"timestamp": custom_format })
+
+        # push: Guarda el objeto en la colección
+        new_resource = ref.push(data)
+
+        # Devuelve el id del objeto guardado
+        return Response({"id": new_resource.key}, status=status.HTTP_201_CREATED)
