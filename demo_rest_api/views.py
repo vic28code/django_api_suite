@@ -75,3 +75,13 @@ class DemoRestApiItem(APIView):
             return Response({'message': 'Elemento eliminado lógicamente.'}, status=status.HTTP_200_OK)
 
         return Response({'error': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    def get(self, request):
+
+      # Referencia a la colección
+      ref = db.reference(f'{self.collection_name}')
+
+      # get: Obtiene todos los elementos de la col ección
+      data = ref.get()
+
+      # Devuelve un arreglo JSON
+      return Response(data, status=status.HTTP_200_OK)
