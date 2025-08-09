@@ -36,52 +36,69 @@ class DemoRestApi(APIView):
 
 class DemoRestApiItem(APIView):
     def put(self, request, item_id):
-        data = request.data
-
+        data = request.data or {}
+        if 'id' not in data:
+            return Response(
+                {'message': 'El campo "id" es obligatorio en el cuerpo de la solicitud.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if data['id'] != item_id:
+            return Response(
+                {'message': 'El "id" del cuerpo no coincide con el "item_id" de la URL.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         if 'name' not in data or 'email' not in data:
-            return Response({'error': 'Faltan campos requeridos: name y email.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'message': 'Faltan campos requeridos: name y email.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         item = find_item_by_id(item_id)
-        if item:
-            new_item = {
-                'id': item_id,
-                'name': data['name'],
-                'email': data['email'],
-                'is_active': data.get('is_active', item.get('is_active', True))
-            }
-            index = data_list.index(item)
-            data_list[index] = new_item
-            return Response({'message': 'Elemento reemplazado exitosamente.', 'data': new_item}, status=status.HTTP_200_OK)
+        if not item:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        new_item = {
+            'id': item_id,
+            'name': data['name'],
+            'email': data['email'],
+            'is_active': data.get('is_active', item.get('is_active', True))
+        }
+        idx = data_list.index(item)
+        data_list[idx] = new_item
 
-        return Response({'error': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {'message': 'Elemento reemplazado exitosamente.', 'data': new_item},
+            status=status.HTTP_200_OK
+        )
 
     def patch(self, request, item_id):
-        data = request.data
+        data = request.data or {}
         item = find_item_by_id(item_id)
-        if item:
-            for key, value in data.items():
-                if key != 'id':
-                    item[key] = value
-            return Response({'message': 'Elemento actualizado parcialmente.', 'data': item}, status=status.HTTP_200_OK)
+        if not item:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({'error': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        if 'id' in data and data['id'] != item_id:
+            return Response(
+                {'message': 'No se permite modificar el "id". Debe coincidir con la URL.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        allowed_fields = {'name', 'email', 'is_active'}
+        for key, value in data.items():
+            if key in allowed_fields:
+                item[key] = value
+
+        return Response(
+            {'message': 'Elemento actualizado parcialmente.', 'data': item},
+            status=status.HTTP_200_OK
+        )
 
     def delete(self, request, item_id):
         item = find_item_by_id(item_id)
-        if item:
-            if not item.get('is_active', True):
-                return Response({'error': 'El elemento ya está inactivo.'}, status=status.HTTP_400_BAD_REQUEST)
-            item['is_active'] = False
-            return Response({'message': 'Elemento eliminado lógicamente.'}, status=status.HTTP_200_OK)
+        if not item:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response({'error': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-    def get(self, request):
+        if not item.get('is_active', True):
+            return Response({'message': 'El elemento ya estaba inactivo.'}, status=status.HTTP_400_BAD_REQUEST)
 
-      # Referencia a la colección
-      ref = db.reference(f'{self.collection_name}')
-
-      # get: Obtiene todos los elementos de la col ección
-      data = ref.get()
-
-      # Devuelve un arreglo JSON
-      return Response(data, status=status.HTTP_200_OK)
+        item['is_active'] = False
+        return Response({'message': 'Elemento eliminado lógicamente.'}, status=status.HTTP_200_OK)
