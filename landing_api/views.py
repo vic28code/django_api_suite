@@ -9,7 +9,7 @@ from datetime import datetime
 # Create your views here.
 class LandingAPI(APIView):
     name = "Landing API"
-    collection_name = "pedidos"
+    collection_name = "encargos"
     def get(self, request):
         # Referencia a la colección
         ref = db.reference(f'{self.collection_name}')
