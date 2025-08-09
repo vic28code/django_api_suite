@@ -6,7 +6,7 @@ from datetime import datetime
 
 class LandingAPI(APIView):
     name = "Landing API"
-    collection_name = "pedidos"
+    collection_name = "encargos"
 
     def get(self, request, pk=None):
         ref = db.reference(f'{self.collection_name}')
