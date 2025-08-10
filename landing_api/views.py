@@ -8,16 +8,8 @@ class LandingAPI(APIView):
     name = "Landing API"
     collection_name = "encargos"
 
-    def get(self, request, pk=None):
+    def get(self, request):
         ref = db.reference(f'{self.collection_name}')
-
-        if pk:
-            item_ref = ref.child(pk)
-            item = item_ref.get()
-            if item:
-                return Response(item, status=status.HTTP_200_OK)
-            return Response({'error': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
         data = ref.get()
         return Response(data, status=status.HTTP_200_OK)
 
@@ -30,8 +22,7 @@ class LandingAPI(APIView):
 
         new_resource = ref.push(data)
         return Response({"id": new_resource.key}, status=status.HTTP_201_CREATED)
-
-
+'''
 class LandingAPIItem(APIView):
     collection_name = "encargos"
 
@@ -39,7 +30,6 @@ class LandingAPIItem(APIView):
         return db.reference(f"{self.collection_name}/{item_id}")
 
     def get(self, request, item_id):
-        """GET individual item"""
         ref = self._item(item_id)
         current = ref.get()
         if current is None:
@@ -124,3 +114,66 @@ class LandingAPIItem(APIView):
                 return Response({'message': 'Error: el elemento no se pudo eliminar completamente.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({'message': f'Error al eliminar: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+'''
+
+class LandingAPIItem(APIView):
+    collection_name = "encargos"
+
+    def _item(self, item_id: str):
+        # referencia directa al nodo del item
+        return db.reference(f"{self.collection_name}/{item_id}")
+
+    def get(self, request, item_id):
+        ref = self._item(item_id)
+        data = ref.get()
+        if data is None:
+            return Response({"message": "Elemento no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        # devuelve el objeto incluyendo su id para comodidad
+        return Response({"id": item_id, **data}, status=status.HTTP_200_OK)
+    
+    def put(self, request, item_id):
+        data = dict(request.data or {})
+        if 'id' not in data:
+            return Response({'message': 'El campo "id" es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+        if data['id'] != item_id:
+            return Response({'message': 'El "id" del body debe coincidir con la URL.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        ref = self._item(item_id)
+        if ref.get() is None:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # timestamp automático
+        now = datetime.now()
+        custom_format = now.strftime("%d/%m/%Y, %I:%M:%S %p").lower().replace('am', 'a. m.').replace('pm', 'p. m.')
+        data['timestamp'] = custom_format
+
+        ref.set(data)
+        return Response({'message': 'Reemplazado correctamente.'}, status=status.HTTP_200_OK)
+
+    def patch(self, request, item_id):
+        """
+        Actualización parcial del recurso.
+        """
+        ref = self._item(item_id)
+        if ref.get() is None:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        partial = dict(request.data or {})
+        if 'id' in partial and partial['id'] != item_id:
+            return Response({'message': 'No se permite cambiar el id.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # timestamp automático
+        now = datetime.now()
+        custom_format = now.strftime("%d/%m/%Y, %I:%M:%S %p").lower().replace('am', 'a. m.').replace('pm', 'p. m.')
+        partial['timestamp'] = custom_format
+
+        ref.update(partial)
+        return Response({'message': 'Actualizado correctamente.'}, status=status.HTTP_200_OK)
+
+    def delete(self, request, item_id):
+        ref = self._item(item_id)
+        if ref.get() is None:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        ref.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
