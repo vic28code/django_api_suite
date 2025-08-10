@@ -31,47 +31,96 @@ class LandingAPI(APIView):
         new_resource = ref.push(data)
         return Response({"id": new_resource.key}, status=status.HTTP_201_CREATED)
 
-    def put(self, request, pk):
-        data = request.data
+
+class LandingAPIItem(APIView):
+    collection_name = "encargos"
+
+    def _item(self, item_id: str):
+        return db.reference(f"{self.collection_name}/{item_id}")
+
+    def get(self, request, item_id):
+        """GET individual item"""
+        ref = self._item(item_id)
+        current = ref.get()
+        if current is None:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(current, status=status.HTTP_200_OK)
+
+    # PUT: reemplazo total en Firebase. Exige id en body e igual a la URL.
+    def put(self, request, item_id):
+        data = dict(request.data or {})
+        if 'id' not in data:
+            return Response({'message': 'El campo "id" es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+        if data['id'] != item_id:
+            return Response({'message': 'El "id" del body debe coincidir con la URL.'}, status=status.HTTP_400_BAD_REQUEST)
         if 'name' not in data or 'email' not in data:
-            return Response({'error': 'Faltan campos requeridos: name y email.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Faltan campos requeridos: name y email.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        item_ref = db.reference(f'{self.collection_name}/{pk}')
-        item = item_ref.get()
+        ref = self._item(item_id)
+        current = ref.get()
+        if current is None:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if item:
-            new_item = {
-                'name': data['name'],
-                'email': data['email'],
-                'is_active': data.get('is_active', item.get('is_active', True)),
-                'timestamp': item.get('timestamp', '')
-            }
-            item_ref.set(new_item)
-            return Response({'message': 'Elemento reemplazado exitosamente.', 'data': new_item}, status=status.HTTP_200_OK)
+        new_item = {
+            'id': item_id,
+            'name': data['name'],
+            'email': data['email'],
+            'is_active': data.get('is_active', True),
+            'timestamp': data.get('timestamp', current.get('timestamp', '')),
+        }
+        
+        try:
+            ref.set(new_item)  # reemplazo total en Firebase
+            # Verificar que se guardó correctamente
+            saved_item = ref.get()
+            if saved_item:
+                return Response({'message': 'Elemento reemplazado exitosamente.', 'data': saved_item}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Error al guardar en Firebase.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'message': f'Error al actualizar: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({'error': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+    # PATCH: actualización parcial en Firebase. No permite cambiar id.
+    def patch(self, request, item_id):
+        partial = dict(request.data or {})
+        if 'id' in partial and partial['id'] != item_id:
+            return Response({'message': 'No se permite modificar el "id".'}, status=status.HTTP_400_BAD_REQUEST)
 
-    def patch(self, request, pk):
-        data = request.data
-        item_ref = db.reference(f'{self.collection_name}/{pk}')
-        item = item_ref.get()
+        ref = self._item(item_id)
+        current = ref.get()
+        if current is None:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if item:
-            item.update({k: v for k, v in data.items() if k != 'id'})
-            item_ref.update(item)
-            return Response({'message': 'Elemento actualizado parcialmente.', 'data': item}, status=status.HTTP_200_OK)
+        allowed = {'name', 'email', 'is_active', 'timestamp'}
+        to_update = {k: v for k, v in partial.items() if k in allowed}
+        if not to_update:
+            return Response({'message': 'No hay campos válidos para actualizar.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({'error': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            ref.update(to_update)  # actualización parcial
+            # Verificar que se actualizó correctamente
+            updated_item = ref.get()
+            if updated_item:
+                return Response({'message': 'Elemento actualizado parcialmente.', 'data': updated_item}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Error al actualizar en Firebase.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'message': f'Error al actualizar: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def delete(self, request, pk):
-        item_ref = db.reference(f'{self.collection_name}/{pk}')
-        item = item_ref.get()
+    # DELETE: eliminación física directa
+    def delete(self, request, item_id):
+        ref = self._item(item_id)
+        current = ref.get()
+        if current is None:
+            return Response({'message': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if item:
-            if not item.get('is_active', True):
-                return Response({'error': 'El elemento ya está inactivo.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            item_ref.update({'is_active': False})
-            return Response({'message': 'Elemento eliminado lógicamente.'}, status=status.HTTP_200_OK)
-
-        return Response({'error': 'Elemento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            ref.delete()
+            # Verificar que se eliminó correctamente
+            deleted_check = ref.get()
+            if deleted_check is None:
+                return Response({'message': f'Elemento {item_id} eliminado permanentemente.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': 'Error: el elemento no se pudo eliminar completamente.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'message': f'Error al eliminar: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
